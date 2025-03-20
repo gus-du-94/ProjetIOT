@@ -2,8 +2,8 @@
 #include <LiquidCrystal_I2C.h>
 
 #define GAS_SENSOR_DIGITAL 23  // Sortie numérique du capteur (D0)
-#define GAS_SENSOR_ANALOG  34  // Sortie analogique du capteur (A0)
 #define BUZZER_PIN         25  // Buzzer
+#define GAS_SENSOR_ANALOG 34
 
 LiquidCrystal_I2C lcd(0x27, 16, 2); // Initialisation du LCD à l'adresse 0x27
 
