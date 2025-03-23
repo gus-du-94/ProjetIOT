@@ -6,6 +6,8 @@
 #include <DHT.h>
 #include <Adafruit_NeoPixel.h>
 #include <LiquidCrystal_PCF8574.h>
+#include <WiFi.h>
+#include <WebServer.h>
 
 Servo motorRight;
 Servo motorLeft;
@@ -22,6 +24,18 @@ Servo motorLeft;
 #define BUTTON 16 // boutton
 
 DHT dht(DHTPIN, DHTTYPE);
+
+const char* ssid = "Gaby";
+const char* passwordWiFi = "ehip4616";
+bool isWiFiOn = false;
+bool isBTOn = false;
+
+IPAddress local_IP(192, 168, 43, 100);
+IPAddress gateway(192, 168, 239, 6);
+IPAddress subnet(255, 255, 255, 0);
+IPAddress primaryDNS(8, 8, 8, 8);       
+IPAddress secondaryDNS(8, 8, 4, 4);
+WebServer server(80); // Serveur HTTP sur le port 80
 
 const int analogPin = 34; // Capteur eau
 MFRC522_I2C mfrc522(0x28, -1, &Wire);  // RFID
@@ -49,6 +63,11 @@ const int ledYPin = 12;
 
 boolean gaz1 = 1;
 boolean gaz2 = 1;
+
+float lastTemperature = 0.0;
+float lastHumidity = 0.0;
+float lastGasPercentage = 0.0;
+float lastSteamPercentage = 0.0;
 
 void scanI2C() {
   for (byte addr = 1; addr < 127; addr++) {
@@ -110,10 +129,103 @@ void close() {
   motorLeft.write(0);
 }
 
+void handleRoot() {
+  String response = "{";
+  response += "\"temperature\":" + String(lastTemperature) + ",";
+  response += "\"humidity\":" + String(lastHumidity) + ",";
+  response += "\"gas\":" + String(lastGasPercentage) + ",";
+  response += "\"steam\":" + String(lastSteamPercentage);
+  response += "}";
+
+  server.send(200, "application/json", response);
+}
+
+void startWiFi() {
+  WiFi.disconnect(true);
+  Serial.println("Début de la connexion WiFi...");
+  
+  WiFi.begin(ssid, passwordWiFi);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Connexion");
+
+  Serial.println("Connexion en cours...");
+
+  unsigned long startAttemptTime = millis();
+  while (WiFi.status() != WL_CONNECTED && millis() - startAttemptTime < 15000) { // Timeout de 15s
+    delay(500);
+    Serial.print(".");
+    
+    for (int i = 9; i < 12; i++) {
+      lcd.setCursor(i, 0);
+      lcd.print(".");
+      delay(500);
+      if (i == 11) {
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Connexion");
+      }
+    }
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("Connexion réussie !");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("WiFi On !");
+    lcd.setCursor(0, 1);
+    lcd.print(WiFi.localIP().toString());
+    server.on("/", handleRoot);
+    server.begin();
+    Serial.print("Adresse IP:");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("Échec de connexion !");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("WiFi echoue !");
+  }
+
+  delay(3000);
+}
+
+
+void stopWiFi() {
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+}
+
+void startBT() {
+
+}
+
+void stopBT() {
+
+}
+
+void scanWiFi() {
+  Serial.println("Scan WiFi en cours...");
+  int n = WiFi.scanNetworks();
+  if (n == 0) {
+    Serial.println("Aucun réseau trouvé.");
+  } else {
+    Serial.println("Réseaux trouvés :");
+    for (int i = 0; i < n; i++) {
+      Serial.print(WiFi.SSID(i));
+      Serial.print(" (Signal: ");
+      Serial.print(WiFi.RSSI(i));
+      Serial.println(" dBm)");
+    }
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   Wire.begin();
   dht.begin();
+  WiFi.disconnect(true);
+  scanWiFi();
+  delay(1000);
 
   strip.begin();
   for(int i = 0; i < LED_COUNT; i++) {
@@ -146,6 +258,13 @@ void setup() {
   mfrc522.PCD_Init(); // RFID
 
   pinMode(BUTTON, INPUT_PULLUP);
+
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("WI-FI OFF");
+  lcd.setCursor(0, 1);
+  lcd.print("Bluetooth OFF");
+  delay(5000);
 
   strip.setPixelColor(3, strip.Color(0, 5, 0));
   strip.show();
@@ -219,7 +338,6 @@ void loop() {
       }
     }
   
-
     if (isnan(temperature) || isnan(humidity)) {
       Serial.println("Erreur capteur température/humidité");
       return;
@@ -238,6 +356,13 @@ void loop() {
       lcd.print("Gaz : " + String(gasPercentage) + " %");
     }
     
+    lastTemperature = temperature;
+    lastHumidity = humidity;
+    lastGasPercentage = gasPercentage;
+    lastSteamPercentage = steamPercentage;
+
+    server.handleClient();
+
     Serial.println("Température : " + String(temperature) + " °C");
     Serial.println("Humidité : " + String(humidity) + " %");
     Serial.println("Vapeur : " + String(steamPercentage) + " %");
@@ -277,25 +402,29 @@ void loop() {
       delay(200);
     }
   } else if (password = "186 67 94 181") {
-    if (proximityDetector) {
-      proximityDetector = false;
+    if (!isWiFiOn) {
+      isWiFiOn = true;
+      isBTOn = false;
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("alarme mouvement");
+      lcd.print("WiFi On");
       lcd.setCursor(0, 1);
-      lcd.print("desactive");
-      digitalWrite(ledYPin, LOW);
-      delay(200);
-    } else {
-      proximityDetector = true;
+      lcd.print("BT OFF");
+      startWiFi();
+
+    } else if (isWiFiOn) {
+      isWiFiOn = false;
+      isBTOn = true;
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("alarme mouvement");
+      lcd.print("WiFi OFF");
       lcd.setCursor(0, 1);
-      lcd.print("active");
-      digitalWrite(ledYPin, HIGH);
-      delay(200);
+      lcd.print("BT ON");
+      stopWiFi();
     }
+    delay(500);
+
+
   } else {
     lcd.print("Card Invalid");
   }
