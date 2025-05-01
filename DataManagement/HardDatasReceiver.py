@@ -1,7 +1,6 @@
 import serial
 import serial.tools.list_ports
 
-# Listes pour stocker les données
 temperatures = []
 humidities = []
 vapors = []
@@ -29,30 +28,27 @@ else:
     print("ESP non détecté !")
 
 while True:
-    try:
-        ligne = ser.readline().decode('utf-8').strip()  # Lire une ligne et nettoyer
+    data = {"Température": None, "Humidité": None, "Vapeur": None, "Gaz": None}
+
+    for _ in range(4):
+        ligne = ser.readline().decode('utf-8').strip()
         if ligne:
-            if "Température" in ligne:
-                valeur = float(ligne.split(":")[1].strip().split(" ")[0])
-                temperatures.append(valeur)
-            elif "Humidité" in ligne:
-                valeur = float(ligne.split(":")[1].strip().split(" ")[0])
-                humidities.append(valeur)
-            elif "Vapeur" in ligne:
-                valeur = float(ligne.split(":")[1].strip().split(" ")[0])
-                vapors.append(valeur)
-            elif "Gaz" in ligne:
-                valeur = float(ligne.split(":")[1].strip().split(" ")[0])
-                gases.append(valeur)
+            for key in data.keys():
+                if key in ligne:
+                    valeur = float(ligne.split(":")[1].strip().split(" ")[0])
+                    data[key] = valeur
 
-            # Affichage des valeurs et des moyennes
-            print(f"Moyenne températures : {round(moyenne(temperatures), 2)} °C")
-            print(f"Moyenne Humidités : {round(moyenne(humidities), 2)} %")
-            print(f"Moyenne Vapeurs : {round(moyenne(vapors), 2)} %")
-            print(f"Moyenne Gaz : {round(moyenne(gases), 2)} %")
-            print("-" * 50)
+    if data["Température"] is not None:
+        temperatures.append(data["Température"])
+    if data["Humidité"] is not None:
+        humidities.append(data["Humidité"])
+    if data["Vapeur"] is not None:
+        vapors.append(data["Vapeur"])
+    if data["Gaz"] is not None:
+        gases.append(data["Gaz"])
 
-    except KeyboardInterrupt:
-        print("\nArrêt du programme")
-        ser.close()
-        break
+    print(f"Moyenne Températures : {round(moyenne(temperatures), 2)} °C")
+    print(f"Moyenne Humidités : {round(moyenne(humidities), 2)} %")
+    print(f"Moyenne Vapeurs : {round(moyenne(vapors), 2)} %")
+    print(f"Moyenne Gaz : {round(moyenne(gases), 2)} %")
+    print("-" * 50)
