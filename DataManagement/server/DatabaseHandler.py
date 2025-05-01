@@ -8,7 +8,10 @@ class DatabaseHandler():
 
     def add_data(self, temperature, humidity, gas, steam, date, hour):
         cursor = self.connect.cursor()
-        query = ""
+        query = """
+        INSERT INTO datas (temperatures, humidity, gas, steam, date, hour)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """
         cursor.execute(query, (temperature, humidity, gas, steam, date, hour, ))
         cursor.close()
         self.connect.commit()

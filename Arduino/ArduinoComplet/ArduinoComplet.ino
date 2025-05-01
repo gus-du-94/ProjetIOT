@@ -25,8 +25,8 @@ Servo motorLeft;
 
 DHT dht(DHTPIN, DHTTYPE);
 
-const char* ssid = "Gaby";
-const char* passwordWiFi = "ehip4616";
+const char* ssid = "DESKTOP-3RT6VB4 6195";
+const char* passwordWiFi = "q91O>519";
 bool isWiFiOn = false;
 bool isBTOn = false;
 
