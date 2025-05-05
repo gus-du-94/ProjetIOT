@@ -58,7 +58,7 @@ while True:
             "hour": str(now.time().strftime("%H:%M:%S"))
         }
         try:
-            requests.post("http://<IP_DU_SERVEUR>:5000/add_data", json=payload)
+            requests.post("http://45.140.165.126:5000/add_data", json=payload)
             print("Données envoyées au serveur :", payload)
         except Exception as e:
             print("Erreur d'envoi au serveur :", e)
