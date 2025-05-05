@@ -1,5 +1,8 @@
 import serial
 import serial.tools.list_ports
+import datetime
+import time
+import requests
 
 temperatures = []
 humidities = []
@@ -16,16 +19,13 @@ def port_detector():
     return None
 
 
-def moyenne(liste):
-    return sum(liste) / len(liste) if liste else 0
-
-
 userSerPort = port_detector()
 if userSerPort:
     print(f"ESP connecté sur le port {userSerPort}")
     ser = serial.Serial(userSerPort, 115200)
 else:
     print("ESP non détecté !")
+    exit()
 
 while True:
     data = {"Température": None, "Humidité": None, "Vapeur": None, "Gaz": None}
@@ -47,8 +47,21 @@ while True:
     if data["Gaz"] is not None:
         gases.append(data["Gaz"])
 
-    print(f"Moyenne Températures : {round(moyenne(temperatures), 2)} °C")
-    print(f"Moyenne Humidités : {round(moyenne(humidities), 2)} %")
-    print(f"Moyenne Vapeurs : {round(moyenne(vapors), 2)} %")
-    print(f"Moyenne Gaz : {round(moyenne(gases), 2)} %")
-    print("-" * 50)
+    now = datetime.datetime.now()
+    if all(val is not None for val in [data["Température"], data["Humidité"], data["Gaz"], data["Vapeur"]]):
+        payload = {
+            "temperature": data["Température"],
+            "humidity": data["Humidité"],
+            "gas": data["Gaz"],
+            "steam": data["Vapeur"],
+            "date": str(now.date()),
+            "hour": str(now.time().strftime("%H:%M:%S"))
+        }
+        try:
+            requests.post("http://<IP_DU_SERVEUR>:5000/add_data", json=payload)
+            print("Données envoyées au serveur :", payload)
+        except Exception as e:
+            print("Erreur d'envoi au serveur :", e)
+
+    time.sleep(60)
+

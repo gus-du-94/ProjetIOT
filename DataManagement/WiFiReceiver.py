@@ -8,7 +8,7 @@ ip = input("Saisissez l'ip de l'esp : ")
 url = "http://" + ip + "/"
 
 dernier_json = None
-DatabaseHandler = DatabaseHandler("localtest.db")
+DatabaseHandler = DatabaseHandler("localtestTrd.db")
 
 while True:
     try:
@@ -20,8 +20,18 @@ while True:
                 now = datetime.datetime.now()
                 dernier_json = data
 
-                DatabaseHandler.add_data(data['temperature'], data['humidity'], data['gas'], data['steam'],
-                                         str(now.date()), str(now.time().strftime("%H:%M:%S")))
+                payload = {
+                    "temperature": data['temperature'],
+                    "humidity": data['humidity'],
+                    "gas": data['gas'],
+                    "steam": data['steam'],
+                    "date": str(now.date()),
+                    "hour": str(now.time().strftime("%H:%M:%S"))
+                }
+                try:
+                    requests.post("http://<IP_DU_SERVEUR>:5000/add_data", json=payload)
+                except Exception as e:
+                    print("Erreur d'envoi au serveur :", e)
         else:
             print("Réponse inattendue :", response.status_code)
     except Exception as e:
