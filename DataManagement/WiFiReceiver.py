@@ -2,13 +2,11 @@ import datetime
 
 import requests
 import time
-from server.DatabaseHandler import DatabaseHandler
 
 ip = input("Saisissez l'ip de l'esp : ")
 url = "http://" + ip + "/"
 
 dernier_json = None
-DatabaseHandler = DatabaseHandler("localtestTrd.db")
 
 while True:
     try:
